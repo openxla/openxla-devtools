@@ -40,7 +40,7 @@ The `--sync` option tells checkout to behave as if the `sync` command was
 run on the checked out repository. This has the effect of checking out the
 pinned revisions of all deps recursively.
 
-### Updating version pins
+### Manually updating version pins
 
 NOTE: Some projects manage their dependencies via submodules. Such cases are
 not covered here (just use normal `git` tools).
@@ -72,3 +72,22 @@ chosen commits.
 
 This same basic procedure will be applied by automation which periodically
 moves all dependencies forward when there are no build/test issues.
+
+### Rolling dependencies
+
+A repository may be configured to have dependency rolling schedules. These
+schedules can be invoked by both humans and automation to bump dependencies
+according to different policies.
+
+Typically, a repository will define two schedules (if it has any):
+
+* `continuous`: Makes "inter-day" updates to core dependencies. Used to
+  integrate rapidly changing deps automatically.
+* `nightly`: Makes "once per day" updates to all dependencies. These can be
+  done multiple times per day if desired but typically this involves "big
+  jumps". Usually this schedule will be responsible for updating pinned
+  binaries (i.e. pip packages) and such as well (which may be derived from
+  nightly releases).
+
+Once dependencies are rolled, `sync` must be performed and any project specific
+steps for upgrading packages.

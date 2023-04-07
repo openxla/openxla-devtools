@@ -10,8 +10,6 @@ from pathlib import Path
 import shlex
 import subprocess
 
-from . import utils
-
 
 def clone(repo_url: str, d: Path):
   run(["clone", repo_url, str(d)], capture_coutput=False)
@@ -57,6 +55,18 @@ def checkout_revision(d: Path, ref: str):
   run(["checkout", "--detach", ref], d)
 
 
+def get_remote_head(url: str, branch: str) -> str:
+  cp = run(["ls-remote", "--heads", url, branch], silent=True, check=True)
+  lines = cp.stdout.decode().splitlines()
+  if len(lines) != 1:
+    raise GitError(f"ls-remote returned multiple results for {url} {branch}")
+  line = lines[0]
+  comps = line.split()
+  if len(comps) < 1:
+    raise GitError(f"ls-remote returned malformed output")
+  return comps[0]
+
+
 def run(args,
         cwd=None,
         *,
@@ -72,6 +82,10 @@ def run(args,
   cp = subprocess.run(args, cwd=str(cwd), capture_output=capture_coutput)
   if check and cp.returncode != 0:
     addl_info = f":\n({cp.stderr})" if capture_coutput else ""
-    raise utils.CLIError(f"Git command failed: {args_text} (from {cwd})"
-                         f"{addl_info}")
+    raise GitError(f"Git command failed: {args_text} (from {cwd})"
+                   f"{addl_info}")
   return cp
+
+
+class GitError(Exception):
+  ...

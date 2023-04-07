@@ -10,90 +10,91 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import git
+from . import roller
 from . import workspace_meta
-from . import utils
+from . import types
 
-
-@dataclass
-class RepoInfo:
-  name: str
-  ro_url: str
-  rw_url: str
-  deps: List[str]
-  submodules: bool = False
-  tracking_branch: str = "main"
-
-  def __post_init__(self):
-    if self.name in ALL_REPOS:
-      raise ValueError(f"Repository {self.name} already exists")
-    ALL_REPOS[self.name] = self
-
-  def dir(self,
-          ws: workspace_meta.WorkspaceMeta,
-          *,
-          validate: bool = True) -> Path:
-    repo_dir = ws.dir / self.name
-    if validate:
-      if not git.toplevel(repo_dir):
-        raise utils.CLIError(
-            f"Repository {self.name} at {repo_dir} is not checkout out")
-    return repo_dir
-
-
-ALL_REPOS: Dict[str, RepoInfo] = {}
-
-RepoInfo(name="iree",
-         ro_url="https://github.com/openxla/iree.git",
-         rw_url="git@github.com:openxla/iree.git",
-         deps=[],
-         submodules=True)
+types.RepoInfo(name="iree",
+               ro_url="https://github.com/openxla/iree.git",
+               rw_url="git@github.com:openxla/iree.git",
+               deps=[],
+               submodules=True)
 # Not technically part of OpenXLA but key to integration.
-RepoInfo(name="jax",
-         ro_url="https://github.com/google/jax.git",
-         rw_url="git@github.com:google/jax.git",
-         deps=[])
-RepoInfo(name="openxla-pjrt-plugin",
-         ro_url="https://github.com/openxla/openxla-pjrt-plugin.git",
-         rw_url="git@github.com:openxla/openxla-pjrt-plugin.git",
-         deps=["iree", "jax", "xla"])
-RepoInfo(name="stablehlo",
-         ro_url="https://github.com/openxla/stablehlo.git",
-         rw_url="git@github.com:openxla/stablehlo.git",
-         deps=[])
-RepoInfo(name="xla",
-         ro_url="https://github.com/openxla/xla.git",
-         rw_url="git@github.com:openxla/xla.git",
-         deps=[])
+types.RepoInfo(name="jax",
+               ro_url="https://github.com/google/jax.git",
+               rw_url="git@github.com:google/jax.git",
+               deps=[])
+types.RepoInfo(
+    name="openxla-pjrt-plugin",
+    ro_url="https://github.com/openxla/openxla-pjrt-plugin.git",
+    rw_url="git@github.com:openxla/openxla-pjrt-plugin.git",
+    deps=["iree", "jax", "xla"],
+    rolling_schedules={
+        "continuous": [
+            # We want to pick up IREE runtime changes continuously.
+            # For everything else, do it nightly.
+            roller.GitRepoHead("iree"),
+        ],
+        "nightly": [
+            roller.GitRepoHead("iree"),
+            roller.GitRepoHead("xla"),
+            roller.GitRepoHead("jax"),
+            roller.PyPackage(
+                "iree-compiler",
+                pip_flags=[
+                    "-f",
+                    "https://openxla.github.io/iree/pip-release-links.html"
+                ],
+                update_requirements=["requirements.txt"]),
+            roller.PyPackage(
+                "jaxlib",
+                pip_flags=[
+                    "-f",
+                    "https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html",
+                    "--pre",
+                ],
+                update_requirements=["requirements.txt"]),
+        ],
+    },
+)
+types.RepoInfo(name="stablehlo",
+               ro_url="https://github.com/openxla/stablehlo.git",
+               rw_url="git@github.com:openxla/stablehlo.git",
+               deps=[])
+types.RepoInfo(name="xla",
+               ro_url="https://github.com/openxla/xla.git",
+               rw_url="git@github.com:openxla/xla.git",
+               deps=[])
 
 
-def find(name_query: str) -> Optional[RepoInfo]:
-  r = ALL_REPOS.get(name_query)
+def find(name_query: str) -> Optional[types.RepoInfo]:
+  r = types.ALL_REPOS.get(name_query)
   return r
 
 
-def find_required(name_query: str) -> RepoInfo:
+def find_required(name_query: str) -> types.RepoInfo:
   r = find(name_query)
   if not r:
-    options = ', '.join([v.name for v in ALL_REPOS.values()])
-    raise utils.CLIError(f"No repository matching '{name_query}' found ("
+    options = ', '.join([v.name for v in types.ALL_REPOS.values()])
+    raise types.CLIError(f"No repository matching '{name_query}' found ("
                          f"did you mean one of: {options})")
   return r
 
 
-def get_from_dir(dir: Path) -> Tuple[workspace_meta.WorkspaceMeta, RepoInfo]:
+def get_from_dir(dir: Path) -> Tuple[types.WorkspaceMeta, types.RepoInfo]:
   toplevel = git.toplevel(dir)
   if not toplevel:
-    raise utils.CLIError(f"Directory {dir} does not enclose a git repository")
+    raise types.CLIError(f"Directory {dir} does not enclose a git repository")
   ws = workspace_meta.find_required(toplevel)
-  repo = ALL_REPOS.get(toplevel.name)
+  repo = types.ALL_REPOS.get(toplevel.name)
   if not repo:
-    raise utils.CLIError(
+    raise types.CLIError(
         f"Git repository {toplevel} is not a known OpenXLA repository")
   return ws, repo, toplevel
 
 
-def checkout(ws: workspace_meta.WorkspaceMeta,
-             repo: RepoInfo,
+def checkout(ws: types.WorkspaceMeta,
+             repo: types.RepoInfo,
              *,
              rw: bool = True,
              checkout_deps: bool = True,
@@ -106,7 +107,7 @@ def checkout(ws: workspace_meta.WorkspaceMeta,
     path = ws.dir / repo.name
     if path.exists():
       if not git.toplevel(path):
-        raise utils.CLIError(
+        raise types.CLIError(
             "Directory {path} exists but is not a git repository")
       print(f"Skipping checkout of {repo.name} (already exists)")
     else:
@@ -120,7 +121,7 @@ def checkout(ws: workspace_meta.WorkspaceMeta,
     for dep_name in repo.deps:
       if dep_name in skip_repo_names:
         continue
-      dep_repo = ALL_REPOS[dep_name]
+      dep_repo = types.ALL_REPOS[dep_name]
       checkout(ws,
                dep_repo,
                rw=rw,

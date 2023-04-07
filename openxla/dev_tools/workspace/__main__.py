@@ -10,8 +10,9 @@ import sys
 
 from . import pins
 from . import repos
+from . import roller
 from . import workspace_meta
-from . import utils
+from . import types
 
 
 def parse_arguments():
@@ -36,6 +37,12 @@ def parse_arguments():
   pin_parser = subparsers.add_parser("pin",
                                      help="Pin deps to current revisions")
   pin_parser.add_argument("--require-upstream", action="store_true")
+
+  # 'roll' sub-command
+  roll_parser = subparsers.add_parser(
+      "roll",
+      help="Apply a dependency rolling schedule and make corresponding updates")
+  roll_parser.add_argument("schedule", help="Name of the schedule to apply")
 
   # 'sync' sub-command
   sync_parser = subparsers.add_parser(
@@ -74,6 +81,21 @@ def do_pin(args):
   pins.update(ws, r, toplevel, require_upstream=args.require_upstream)
 
 
+def do_roll(args):
+  ws, r, toplevel = repos.get_from_dir(Path.cwd())
+  schedule_name = args.schedule
+  if not r.rolling_schedules:
+    raise types.CLIError(f"Repository {r.name} has no rolling schedules")
+  try:
+    actions = r.rolling_schedules[schedule_name]
+  except KeyError:
+    raise types.CLIError(f"Unknown schedule '{schedule_name}' for {r.name}. "
+                         f"Available: {', '.join(r.rolling_schedules.keys())}")
+  for action in actions:
+    print(f"Performing rolling action: {str(action)}")
+    action.update(ws, r)
+
+
 def do_sync(args):
   ws, r, toplevel = repos.get_from_dir(Path.cwd())
   pins.sync(ws, r, toplevel)
@@ -88,11 +110,13 @@ def main():
       do_init(args)
     elif args.sub_command == "pin":
       do_pin(args)
+    elif args.sub_command == "roll":
+      do_roll(args)
     elif args.sub_command == "sync":
       do_sync(args)
     else:
-      raise utils.CLIError(f"Unrecognized sub command {args.sub_command}")
-  except utils.CLIError as e:
+      raise types.CLIError(f"Unrecognized sub command {args.sub_command}")
+  except types.CLIError as e:
     print(str(e), file=sys.stderr)
     sys.exit(1)
 
