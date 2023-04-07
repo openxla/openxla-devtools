@@ -47,10 +47,15 @@ RepoInfo(name="iree",
          rw_url="git@github.com:openxla/iree.git",
          deps=[],
          submodules=True)
+# Not technically part of OpenXLA but key to integration.
+RepoInfo(name="jax",
+         ro_url="https://github.com/google/jax.git",
+         rw_url="git@github.com:google/jax.git",
+         deps=[])
 RepoInfo(name="openxla-pjrt-plugin",
          ro_url="https://github.com/openxla/openxla-pjrt-plugin.git",
          rw_url="git@github.com:openxla/openxla-pjrt-plugin.git",
-         deps=["iree", "xla"])
+         deps=["iree", "jax", "xla"])
 RepoInfo(name="stablehlo",
          ro_url="https://github.com/openxla/stablehlo.git",
          rw_url="git@github.com:openxla/stablehlo.git",
