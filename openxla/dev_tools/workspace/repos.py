@@ -126,4 +126,5 @@ def checkout(ws: types.WorkspaceMeta,
                dep_repo,
                rw=rw,
                checkout_deps=checkout_deps,
+               submodules=submodules,
                skip_repo_names=skip_repo_names)
