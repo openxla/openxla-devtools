@@ -33,6 +33,10 @@ def parse_arguments():
   checkout_parser.add_argument("--no-deps",
                                action="store_true",
                                help="Disables checkout of dependencies")
+  checkout_parser.add_argument(
+      "--ro",
+      action="store_true",
+      help="Clones repositories using the 'ro' (http) origins")
   checkout_parser.add_argument("repo_name", nargs="+")
 
   # 'init' sub-command
@@ -70,7 +74,8 @@ def do_checkout(args):
     repos.checkout(ws,
                    r,
                    submodules=not args.no_submodules,
-                   checkout_deps=not args.no_deps)
+                   checkout_deps=not args.no_deps,
+                   rw=not args.ro)
     if args.sync:
       pins.sync(ws, r, r.dir(ws), updated_heads=updated_heads)
 
