@@ -28,13 +28,17 @@ Quick start to create an openxla repository and start developing:
 mkdir ~/openxla
 cd ~/openxla
 openxla-workspace init
-openxla-workspace checkout openxla-pjrt-plugin
+openxla-workspace checkout --sync openxla-pjrt-plugin
 ```
 
 The above will initialize a new workspace and checkout the `openxla-pjrt-plugin`
 plus its dependencies, syncing to the dependency version pins that the project
 specifies. There is nothing special about this project except that it is a
 leaf project and illustrates dependency resolution.
+
+The `--sync` option tells checkout to behave as if the `sync` command was
+run on the checked out repository. This has the effect of checking out the
+pinned revisions of all deps recursively.
 
 ### Updating version pins
 
