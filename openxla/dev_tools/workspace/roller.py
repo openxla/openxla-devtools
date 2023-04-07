@@ -69,12 +69,14 @@ class PyPackage(types.RepoAction):
     cp = subprocess.run(pip_args, capture_output=True, check=True)
     output = cp.stdout.decode()
     print(output)
-    # We are looking for a line that contains "LATEST:"
+    # The CLI for this command has changed a bit, but the "Available versions:"
+    # line is so far consistent.
     found_version = None
     for line in output.splitlines():
-      m = re.match(r"^\s*LATEST:\s+(.+)", line)
+      m = re.match(r"^\s*Available versions:\s+(.+)", line)
       if m:
-        found_version = m.group(1)
+        all_versions = re.split(r"\s*,\s*", m.group(1))
+        found_version = all_versions[0]
         break
     else:
       raise types.CLIError(
