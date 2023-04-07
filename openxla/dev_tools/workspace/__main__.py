@@ -27,6 +27,12 @@ def parse_arguments():
   checkout_parser.add_argument("--sync",
                                action="store_true",
                                help="Sync deps as repositories are checked out")
+  checkout_parser.add_argument("--no-submodules",
+                               action="store_true",
+                               help="Disables all submodule updates")
+  checkout_parser.add_argument("--no-deps",
+                               action="store_true",
+                               help="Disables checkout of dependencies")
   checkout_parser.add_argument("repo_name", nargs="+")
 
   # 'init' sub-command
@@ -61,7 +67,10 @@ def do_checkout(args):
   updated_heads = dict()
   for repo_name in repo_names:
     r = repos.find_required(repo_name)
-    repos.checkout(ws, r)
+    repos.checkout(ws,
+                   r,
+                   submodules=not args.no_submodules,
+                   checkout_deps=not args.no_deps)
     if args.sync:
       pins.sync(ws, r, r.dir(ws), updated_heads=updated_heads)
 
