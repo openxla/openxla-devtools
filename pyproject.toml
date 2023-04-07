@@ -3,6 +3,11 @@ requires = [
     "setuptools>=42",
     "wheel",
     "packaging",
-    "PyYAML",
 ]
 build-backend = "setuptools.build_meta"
+
+[pytest]
+testpaths = [
+  "tests",
+]
+pythonpath = "."

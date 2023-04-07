@@ -51,9 +51,9 @@ setup(
         "openxla.dev_tools.*",
     ]),
     entry_points={
-        "console_scripts": [],
+        "console_scripts": [
+            "openxla-workspace = openxla.dev_tools.workspace.__main__:main"
+        ],
     },
-    install_requires=[
-        "PyYAML",
-    ],
+    install_requires=[],
 )
