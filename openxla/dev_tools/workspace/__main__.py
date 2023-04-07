@@ -23,6 +23,9 @@ def parse_arguments():
   # 'checkout' sub-command
   checkout_parser = subparsers.add_parser("checkout",
                                           help="Checkout a repository")
+  checkout_parser.add_argument("--sync",
+                               action="store_true",
+                               help="Sync deps as repositories are checked out")
   checkout_parser.add_argument("repo_name", nargs="+")
 
   # 'init' sub-command
@@ -34,6 +37,13 @@ def parse_arguments():
                                      help="Pin deps to current revisions")
   pin_parser.add_argument("--require-upstream", action="store_true")
 
+  # 'sync' sub-command
+  sync_parser = subparsers.add_parser(
+      "sync",
+      help=
+      "Sync all dependent repositories to pinned deps of the current repository"
+  )
+
   args = parser.parse_args()
   return args
 
@@ -41,9 +51,12 @@ def parse_arguments():
 def do_checkout(args):
   ws = workspace_meta.find_required()
   repo_names = args.repo_name
+  updated_heads = dict()
   for repo_name in repo_names:
     r = repos.find_required(repo_name)
     repos.checkout(ws, r)
+    if args.sync:
+      pins.sync(ws, r, r.dir(ws))
 
 
 def do_init(args):
@@ -60,6 +73,12 @@ def do_pin(args):
   ws, r, toplevel = repos.get_from_dir(Path.cwd())
   pins.update(ws, r, toplevel, require_upstream=args.require_upstream)
 
+
+def do_sync(args):
+  ws, r, toplevel = repos.get_from_dir(Path.cwd())
+  pins.sync(ws, r, toplevel)
+
+
 def main():
   args = parse_arguments()
   try:
@@ -69,6 +88,8 @@ def main():
       do_init(args)
     elif args.sub_command == "pin":
       do_pin(args)
+    elif args.sub_command == "sync":
+      do_sync(args)
     else:
       raise utils.CLIError(f"Unrecognized sub command {args.sub_command}")
   except utils.CLIError as e:

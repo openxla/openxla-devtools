@@ -53,6 +53,10 @@ def format_ref(d: Path, ref: str) -> str:
   return cp.stdout.decode().strip()
 
 
+def checkout_revision(d: Path, ref: str):
+  run(["checkout", "--detach", ref], d)
+
+
 def run(args,
         cwd=None,
         *,

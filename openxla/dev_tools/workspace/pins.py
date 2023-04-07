@@ -7,6 +7,8 @@
 SYNC_DEPS_FILENAME = "sync_deps.py"
 PIN_DICT_NAME = "PINNED_VERSIONS"
 
+from typing import Dict
+
 import importlib
 import importlib.util
 import json
@@ -97,6 +99,36 @@ def update_dep(ws: workspace_meta.WorkspaceMeta, pin_dict: dict,
     else:
       print("  Validated that revision is on upstream tracking branch")
   return f"{dep_repo.name}: {summary}"
+
+
+def sync(ws: workspace_meta.WorkspaceMeta,
+         repo: repos.RepoInfo,
+         repo_top: Path,
+         *,
+         updated_heads: Dict[str, str] = None):
+  pins = read_existing_pins(repo_top)
+  if updated_heads is None:
+    updated_heads = {}
+  for dep_name in repo.deps:
+    if dep_name in updated_heads:
+      print(f"Skipping duplicate dep in dag: {dep_name}")
+      continue
+    if dep_name not in pins:
+      print(f"WARNING: No pinned revision for {dep_name}. Skipping")
+      continue
+    dep_revision = pins[dep_name]
+    updated_heads[dep_name] = dep_revision
+    print(f"Syncing dep {dep_name} to {dep_revision}")
+    dep_repo = repos.ALL_REPOS[dep_name]
+    dep_dir = dep_repo.dir(ws)
+    current_revision = git.revparse(dep_dir, "HEAD")
+    if current_revision == dep_revision:
+      print("  Already at needed revision.")
+    else:
+      git.checkout_revision(dep_dir, dep_revision)
+
+    # Recurse.
+    sync(ws, dep_repo, dep_dir, updated_heads=updated_heads)
 
 
 def read_existing_pins(repo_top: Path) -> Optional[dict]:
