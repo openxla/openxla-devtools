@@ -91,3 +91,10 @@ Typically, a repository will define two schedules (if it has any):
 
 Once dependencies are rolled, `sync` must be performed and any project specific
 steps for upgrading packages.
+
+Invoke a dependency roll with a command like this:
+
+```
+cd ~/openxla/openxla-pjrt-plugin
+openxla-workspace roll nightly
+```
