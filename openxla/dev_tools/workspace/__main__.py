@@ -56,7 +56,7 @@ def do_checkout(args):
     r = repos.find_required(repo_name)
     repos.checkout(ws, r)
     if args.sync:
-      pins.sync(ws, r, r.dir(ws))
+      pins.sync(ws, r, r.dir(ws), updated_heads=updated_heads)
 
 
 def do_init(args):
