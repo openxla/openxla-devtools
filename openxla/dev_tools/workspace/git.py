@@ -4,7 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from pathlib import Path
 import shlex
@@ -12,13 +12,25 @@ import subprocess
 
 
 def clone(repo_url: str, d: Path):
-  run(["clone", repo_url, str(d)], capture_coutput=False)
+  run(["clone", repo_url, str(d)], capture_output=False)
 
 
-def init_submodules(d: Path):
-  run(["submodule", "update", "--init", "--depth", "1", "--recommend-shallow"],
+def list_submodules(d: Path):
+  results = []
+  cp = run(["submodule", "status"], d, silent=True, capture_output=True)
+  for submodule_status_line in cp.stdout.decode().splitlines():
+    submodule_status_parts = submodule_status_line.split()
+    results.append(submodule_status_parts[1])
+  return results
+
+
+def update_submodules(d: Path, submodules: Sequence[str]):
+  run([
+      "submodule", "update", "--init", "--depth", "1", "--recommend-shallow",
+      "--"
+  ] + submodules,
       d,
-      capture_coutput=False)
+      capture_output=False)
 
 
 def fetch(d: Path, remote: str = "origin"):
@@ -70,7 +82,7 @@ def get_remote_head(url: str, branch: str) -> str:
 def run(args,
         cwd=None,
         *,
-        capture_coutput: bool = True,
+        capture_output: bool = True,
         check: bool = True,
         silent: bool = False):
   if not cwd:
@@ -79,9 +91,9 @@ def run(args,
   args_text = ' '.join([shlex.quote(arg) for arg in args])
   if not silent:
     print(f"[{cwd}]$ {args_text}")
-  cp = subprocess.run(args, cwd=str(cwd), capture_output=capture_coutput)
+  cp = subprocess.run(args, cwd=str(cwd), capture_output=capture_output)
   if check and cp.returncode != 0:
-    addl_info = f":\n({cp.stderr})" if capture_coutput else ""
+    addl_info = f":\n({cp.stderr})" if capture_output else ""
     raise GitError(f"Git command failed: {args_text} (from {cwd})"
                    f"{addl_info}")
   return cp

@@ -4,10 +4,11 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from . import git
 from . import roller
@@ -99,7 +100,9 @@ def checkout(ws: types.WorkspaceMeta,
              rw: bool = True,
              checkout_deps: bool = True,
              submodules: bool = True,
-             skip_repo_names: set = None):
+             skip_repo_names: set = None,
+             exclude_submodules: Sequence[str] = (),
+             exclude_deps: Sequence[str] = ()):
   if not skip_repo_names:
     skip_repo_names = set()
   if repo.name not in skip_repo_names:
@@ -114,17 +117,39 @@ def checkout(ws: types.WorkspaceMeta,
       print(f"Checking out {repo.name} into {path} (from {url})")
       git.clone(url, path)
       if submodules and repo.submodules:
-        git.init_submodules(path)
+
+        def filter_submodule(s):
+          for pattern in exclude_submodules:
+            if re.search(pattern, f"{repo.name}:{s}"):
+              print(f"Excluding submodule {s} based on --exclude-submodule")
+              return False
+          return True
+
+        submodules = [
+            s for s in git.list_submodules(path) if filter_submodule(s)
+        ]
+        git.update_submodules(path, submodules)
 
   skip_repo_names.add(repo.name)
   if checkout_deps:
     for dep_name in repo.deps:
       if dep_name in skip_repo_names:
         continue
+      # Exclude based on flags?
+      exclude_dep = False
+      for exclude_pattern in exclude_deps:
+        if re.search(exclude_pattern, dep_name):
+          exclude_dep = True
+      if exclude_dep:
+        print(f"Excluding {dep_name} based on --exclude-dep")
+        continue
+
       dep_repo = types.ALL_REPOS[dep_name]
       checkout(ws,
                dep_repo,
                rw=rw,
                checkout_deps=checkout_deps,
                submodules=submodules,
-               skip_repo_names=skip_repo_names)
+               skip_repo_names=skip_repo_names,
+               exclude_submodules=exclude_submodules,
+               exclude_deps=exclude_deps)

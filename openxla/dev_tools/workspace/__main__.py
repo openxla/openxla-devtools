@@ -37,6 +37,13 @@ def parse_arguments():
       "--ro",
       action="store_true",
       help="Clones repositories using the 'ro' (http) origins")
+  checkout_parser.add_argument(
+      "--exclude-submodule",
+      nargs="*",
+      help="Exclude submodules by regex (relative to '{project}:{path})")
+  checkout_parser.add_argument("--exclude-dep",
+                               nargs="*",
+                               help="Excludes dependencies by regex")
   checkout_parser.add_argument("repo_name", nargs="+")
 
   # 'init' sub-command
@@ -60,6 +67,13 @@ def parse_arguments():
       help=
       "Sync all dependent repositories to pinned deps of the current repository"
   )
+  sync_parser.add_argument(
+      "--exclude-submodule",
+      nargs="*",
+      help="Exclude submodules by regex (relative to '{project}:{path})")
+  sync_parser.add_argument("--exclude-dep",
+                           nargs="*",
+                           help="Excludes dependencies by regex")
 
   args = parser.parse_args()
   return args
@@ -75,9 +89,16 @@ def do_checkout(args):
                    r,
                    submodules=not args.no_submodules,
                    checkout_deps=not args.no_deps,
-                   rw=not args.ro)
+                   rw=not args.ro,
+                   exclude_submodules=args.exclude_submodule or (),
+                   exclude_deps=args.exclude_dep or ())
     if args.sync:
-      pins.sync(ws, r, r.dir(ws), updated_heads=updated_heads)
+      pins.sync(ws,
+                r,
+                r.dir(ws),
+                exclude_submodules=args.exclude_submodule or (),
+                exclude_deps=args.exclude_dep or (),
+                updated_heads=updated_heads)
 
 
 def do_init(args):
@@ -112,7 +133,11 @@ def do_roll(args):
 
 def do_sync(args):
   ws, r, toplevel = repos.get_from_dir(Path.cwd())
-  pins.sync(ws, r, toplevel)
+  pins.sync(ws,
+            r,
+            toplevel,
+            exclude_submodules=args.exclude_submodule or (),
+            exclude_deps=args.exclude_dep or ())
 
 
 def main():

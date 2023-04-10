@@ -9,12 +9,13 @@ ORIGINS_NAME = "ORIGINS"
 PIN_DICT_NAME = "PINNED_VERSIONS"
 SUBMODULES_NAME = "SUBMODULES"
 
-from typing import Dict
+from typing import Dict, Sequence
 
 import importlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Optional
 
@@ -77,11 +78,22 @@ def sync(ws: types.WorkspaceMeta,
          repo: types.RepoInfo,
          repo_top: Path,
          *,
+         exclude_submodules: Sequence[str] = (),
+         exclude_deps: Sequence[str] = (),
          updated_heads: Dict[str, str] = None):
   pins = read_existing_pins(repo_top)
   if updated_heads is None:
     updated_heads = {}
   for dep_name in repo.deps:
+    # Exclude this dep?
+    exclude_dep = False
+    for exclude_pattern in exclude_deps:
+      if re.search(exclude_pattern, dep_name):
+        exclude_dep = True
+    if exclude_dep:
+      print(f"Excluding {dep_name} based on --exclude-dep")
+      continue
+
     if dep_name in updated_heads:
       print(f"Skipping duplicate dep in dag: {dep_name}")
       continue
@@ -99,8 +111,19 @@ def sync(ws: types.WorkspaceMeta,
     else:
       git.fetch(dep_dir)
       git.checkout_revision(dep_dir, dep_revision)
-      if dep_repo.submodules:
-        git.init_submodules(dep_dir)
+    if dep_repo.submodules:
+
+      def filter_submodule(s):
+        for pattern in exclude_submodules:
+          if re.search(pattern, f"{dep_name}:{s}"):
+            print(f"Excluding submodule {s} based on --exclude-submodule")
+            return False
+        return True
+
+      submodules = [
+          s for s in git.list_submodules(dep_dir) if filter_submodule(s)
+      ]
+      git.update_submodules(dep_dir, submodules)
 
     # Recurse.
     sync(ws, dep_repo, dep_dir, updated_heads=updated_heads)
@@ -221,11 +244,11 @@ def main():
     run(["-c", "advice.detachedHead=false", "checkout", revision], repo_dir)
     if SUBMODULES.get(repo_name):
       print(f"  Initializing submodules for {repo_name}")
-      run(["submodule", "init"], repo_dir)
       cp = run(["submodule", "status"],
                repo_dir,
                silent=True,
                capture_output=True)
+      submodules = []
       for submodule_status_line in cp.stdout.decode().splitlines():
         submodule_status_parts = submodule_status_line.split()
         submodule_path = submodule_status_parts[1]
@@ -236,12 +259,12 @@ def main():
         if exclude_submodule:
           print(f"  Excluding {submodule_path} based on --exclude-submodule")
           continue
+        submodules.append(submodule_path)
 
-        print(f"  Updating submodule {submodule_path}")
-        run([
-            "submodule", "update", "--depth", "1", "--recommend-shallow", "--",
-            submodule_path
-        ], repo_dir)
+      run([
+          "submodule", "update", "--init", "--depth", "1",
+          "--recommend-shallow", "--"
+      ] + submodules, repo_dir)
 
 
 def run(args,
