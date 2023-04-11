@@ -9,7 +9,7 @@ it should not be necessary to actual modify the tools themselves.
 ## Installing the tools
 
 ```
-pip install git+https://github.com/stellaraccident/openxla-dev-tools.git
+pip install git+https://github.com/openxla/openxla-dev-tools.git
 ```
 
 ## openxla-workspace User's Guide
