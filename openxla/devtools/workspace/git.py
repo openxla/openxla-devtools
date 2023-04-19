@@ -24,13 +24,13 @@ def list_submodules(d: Path):
   return results
 
 
-def update_submodules(d: Path, submodules: Sequence[str]):
-  run([
-      "submodule", "update", "--init", "--depth", "1", "--recommend-shallow",
-      "--"
-  ] + submodules,
-      d,
-      capture_output=False)
+def update_submodules(d: Path, submodules: Sequence[str], *, depth: int = 0):
+  args = ["submodule", "update", "--init"]
+  if depth > 0:
+    args += ["--depth", "1"]
+  args += ["--"]
+  args += submodules
+  run(args, d, capture_output=False)
 
 
 def fetch(d: Path, remote: str = "origin"):

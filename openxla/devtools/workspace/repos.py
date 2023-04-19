@@ -100,6 +100,7 @@ def checkout(ws: types.WorkspaceMeta,
              rw: bool = True,
              checkout_deps: bool = True,
              submodules: bool = True,
+             submodules_depth: int = 0,
              skip_repo_names: set = None,
              exclude_submodules: Sequence[str] = (),
              exclude_deps: Sequence[str] = ()):
@@ -128,7 +129,7 @@ def checkout(ws: types.WorkspaceMeta,
         submodules = [
             s for s in git.list_submodules(path) if filter_submodule(s)
         ]
-        git.update_submodules(path, submodules)
+        git.update_submodules(path, submodules, depth=submodules_depth)
 
   skip_repo_names.add(repo.name)
   if checkout_deps:

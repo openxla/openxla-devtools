@@ -44,6 +44,10 @@ def parse_arguments():
   checkout_parser.add_argument("--exclude-dep",
                                nargs="*",
                                help="Excludes dependencies by regex")
+  checkout_parser.add_argument("--submodules-depth",
+                               default=0,
+                               type=int,
+                               help="Update submodules with a --depth")
   checkout_parser.add_argument("repo_name", nargs="+")
 
   # 'init' sub-command
@@ -74,6 +78,10 @@ def parse_arguments():
   sync_parser.add_argument("--exclude-dep",
                            nargs="*",
                            help="Excludes dependencies by regex")
+  sync_parser.add_argument("--submodules-depth",
+                           default=0,
+                           type=int,
+                           help="Update submodules with a --depth")
 
   args = parser.parse_args()
   return args
@@ -98,7 +106,8 @@ def do_checkout(args):
                 r.dir(ws),
                 exclude_submodules=args.exclude_submodule or (),
                 exclude_deps=args.exclude_dep or (),
-                updated_heads=updated_heads)
+                updated_heads=updated_heads,
+                submodules_depth=args.submodules_depth)
 
 
 def do_init(args):
@@ -137,7 +146,8 @@ def do_sync(args):
             r,
             toplevel,
             exclude_submodules=args.exclude_submodule or (),
-            exclude_deps=args.exclude_dep or ())
+            exclude_deps=args.exclude_dep or (),
+            submodules_depth=args.submodules_depth)
 
 
 def main():

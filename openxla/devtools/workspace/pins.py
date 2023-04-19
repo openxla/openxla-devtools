@@ -80,7 +80,8 @@ def sync(ws: types.WorkspaceMeta,
          *,
          exclude_submodules: Sequence[str] = (),
          exclude_deps: Sequence[str] = (),
-         updated_heads: Dict[str, str] = None):
+         updated_heads: Dict[str, str] = None,
+         submodules_depth: int = 0):
   pins = read_existing_pins(repo_top)
   if updated_heads is None:
     updated_heads = {}
@@ -123,7 +124,7 @@ def sync(ws: types.WorkspaceMeta,
       submodules = [
           s for s in git.list_submodules(dep_dir) if filter_submodule(s)
       ]
-      git.update_submodules(dep_dir, submodules)
+      git.update_submodules(dep_dir, submodules, depth=submodules_depth)
 
     # Recurse.
     sync(ws, dep_repo, dep_dir, updated_heads=updated_heads)
@@ -218,6 +219,14 @@ def main():
   parser.add_argument("--exclude-dep",
                       nargs="*",
                       help="Excludes dependencies by regex")
+  parser.add_argument("--depth",
+                      type=int,
+                      default=0,
+                      help="Fetch revisions with --depth")
+  parser.add_argument("--submodules-depth",
+                      type=int,
+                      default=0,
+                      help="Update submodules with --depth")
   args = parser.parse_args()
 
   workspace_dir = Path(__file__).resolve().parent.parent
@@ -240,7 +249,11 @@ def main():
       run(["init"], repo_dir)
       run(["remote", "add", "origin", ORIGINS[repo_name]], repo_dir)
     # Checkout detached head.
-    run(["fetch", "--depth=1", "origin", revision], repo_dir)
+    fetch_args = ["fetch"]
+    if args.depth > 0:
+      fetch_args.append(["--depth=1"])
+    fetch_args += ["origin", revision]
+    run(fetch_args, repo_dir)
     run(["-c", "advice.detachedHead=false", "checkout", revision], repo_dir)
     if SUBMODULES.get(repo_name):
       print(f"  Initializing submodules for {repo_name}")
@@ -261,10 +274,12 @@ def main():
           continue
         submodules.append(submodule_path)
 
-      run([
-          "submodule", "update", "--init", "--depth", "1",
-          "--recommend-shallow", "--"
-      ] + submodules, repo_dir)
+      update_args = ["submodule", "update", "--init"]
+      if args.submodules_depth > 0:
+        update_args += ["--depth", "1"]
+      update_args += ["--"]
+      update_args += submodules
+      run(update_args, repo_dir)
 
 
 def run(args,
