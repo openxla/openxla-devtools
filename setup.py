@@ -31,7 +31,7 @@ PACKAGE_SUFFIX = version_info.get("package-suffix") or ""
 PACKAGE_VERSION = version_info.get("package-version") or "0.0dev1"
 
 setup(
-    name=f"openxla-dev-tools{PACKAGE_SUFFIX}",
+    name=f"openxla-devtools{PACKAGE_SUFFIX}",
     version=f"{PACKAGE_VERSION}",
     author="OpenXLA Authors",
     author_email="iree-discuss@googlegroups.com",
@@ -47,12 +47,12 @@ setup(
     python_requires=">=3.8",
     zip_safe=True,
     packages=find_namespace_packages(include=[
-        "openxla.dev_tools",
-        "openxla.dev_tools.*",
+        "openxla.devtools",
+        "openxla.devtools.*",
     ]),
     entry_points={
         "console_scripts": [
-            "openxla-workspace = openxla.dev_tools.workspace.__main__:main"
+            "openxla-workspace = openxla.devtools.workspace.__main__:main"
         ],
     },
     install_requires=[],

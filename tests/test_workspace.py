@@ -17,7 +17,7 @@ def run(args, cwd) -> subprocess.CompletedProcess:
     cwd = Path.cwd()
   new_env = dict(os.environ)
   new_env["PYTHONPATH"] = Path(__file__).resolve().parent
-  cp = subprocess.run([sys.executable, "-m", "openxla.dev_tools.workspace"] +
+  cp = subprocess.run([sys.executable, "-m", "openxla.devtools.workspace"] +
                       args,
                       env=new_env,
                       capture_output=True,
