@@ -55,7 +55,7 @@ class TestWorkspaceInit(unittest.TestCase):
   def testCheckoutLeaf(self):
     with tempfile.TemporaryDirectory() as d:
       run(["init"], cwd=d).check_returncode()
-      cp = run(["checkout", "xla"], cwd=d)
+      cp = run(["checkout", "--ro", "xla"], cwd=d)
       cp.check_returncode()
 
 
