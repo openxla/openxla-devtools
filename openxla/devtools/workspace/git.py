@@ -27,9 +27,9 @@ def list_submodules(d: Path):
 def update_submodules(d: Path, submodules: Sequence[str], *, depth: int = 0):
   args = ["submodule", "update", "--init"]
   if depth > 0:
-    args += ["--depth", "1"]
-  args += ["--"]
-  args += submodules
+    args.extend(["--depth", "1"])
+  args.extend(["--"])
+  args.extend(submodules)
   run(args, d, capture_output=False)
 
 
