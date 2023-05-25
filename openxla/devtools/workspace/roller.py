@@ -27,7 +27,7 @@ class GitRepoHead(types.RepoAction):
     self.dep_repo_name = dep_repo_name
 
   def __str__(self):
-    return f"GitHeadRepo({self.dep_repo_name})"
+    return f"GitRepoHead({self.dep_repo_name})"
 
   def update(self, ws: types.WorkspaceMeta, r: types.RepoInfo):
     dep_repo = types.ALL_REPOS[self.dep_repo_name]
@@ -35,6 +35,33 @@ class GitRepoHead(types.RepoAction):
                                         dep_repo.tracking_branch)
     print(f"  Remote head for {dep_repo.tracking_branch}: {head_revision}")
     if pins.set_pin_revision(r.dir(ws), self.dep_repo_name, head_revision):
+      print("  Updated pinned revision.")
+    else:
+      print("  No update required.")
+
+
+class GitRepoViaDep(types.RepoAction):
+  """Advances a tracked git dependency to the pinned version of another repo."""
+
+  def __init__(self, dep_repo_name: str, *, via: str):
+    self.dep_repo_name = dep_repo_name
+    self.via = via
+
+  def __str__(self):
+    return f"GitRepoViaDep({self.dep_repo_name}, {self.via})"
+
+  def update(self, ws: types.WorkspaceMeta, r: types.RepoInfo):
+    via_repo = types.ALL_REPOS[self.via]
+    via_repo_dir = via_repo.dir(ws)
+    via_pins = pins.read_existing_pins(via_repo_dir)
+    if self.dep_repo_name not in via_pins:
+      raise types.CLIError(
+          f"Repository {via_repo} does not contain a version pin "
+          f"for {self.dep_repo_name}, which is needed to roll "
+          f"requested versions (available={via_pins}).")
+    dep_revision = via_pins[self.dep_repo_name]
+    print(f"  Resolved revision {dep_revision} via {self.via}")
+    if pins.set_pin_revision(r.dir(ws), self.dep_repo_name, dep_revision):
       print("  Updated pinned revision.")
     else:
       print("  No update required.")
