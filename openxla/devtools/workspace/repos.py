@@ -26,6 +26,24 @@ types.RepoInfo(name="jax",
                rw_url="git@github.com:google/jax.git",
                deps=[])
 types.RepoInfo(
+    name="openxla-nvgpu",
+    ro_url="https://github.com/openxla/openxla-nvgpu.git",
+    rw_url="git@github.com:openxla/openxla-nvgpu.git",
+    # Order is important: The local iree dep takes precedence over the
+    # one derived from other deps, if in conflict.
+    deps=["iree", "openxla-pjrt-plugin"],
+    rolling_schedules={
+        # For full nightly rolls, we sync to the openxla-pjrt-plugin,
+        # and take its transitive dep on iree.
+        "nightly": [
+            roller.GitRepoHead("openxla-pjrt-plugin"),
+            roller.GitRepoViaDep("iree", via="openxla-pjrt-plugin"),
+        ],
+        # We also allow an independent version bump of IREE so long
+        # as it is compatible.
+        "iree": [roller.GitRepoHead("iree"),],
+    })
+types.RepoInfo(
     name="openxla-pjrt-plugin",
     ro_url="https://github.com/openxla/openxla-pjrt-plugin.git",
     rw_url="git@github.com:openxla/openxla-pjrt-plugin.git",
