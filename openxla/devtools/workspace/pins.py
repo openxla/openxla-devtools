@@ -60,7 +60,7 @@ def show(ws: types.WorkspaceMeta, repo: types.RepoInfo, repo_top: Path):
     pin_repo = types.ALL_REPOS[pin_repo_name]
     pin_dir = pin_repo.dir(ws)
     git.fetch(pin_dir)
-    cp = git.run(["show", "--pretty=%C(auto)%h %s, (%cd)", pin_revision],
+    cp = git.run(["show", "--pretty=%C(auto)%h %s (%cd)", pin_revision],
                  pin_dir,
                  silent=True)
     show_output = cp.stdout.decode().splitlines()[0]
@@ -138,7 +138,8 @@ def sync(ws: types.WorkspaceMeta,
       submodules = [
           s for s in git.list_submodules(dep_dir) if filter_submodule(s)
       ]
-      git.update_submodules(dep_dir, submodules, depth=submodules_depth)
+      if submodules:
+        git.update_submodules(dep_dir, submodules, depth=submodules_depth)
 
     # Recurse.
     sync(ws, dep_repo, dep_dir, updated_heads=updated_heads)
