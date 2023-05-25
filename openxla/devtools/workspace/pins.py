@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 import re
 import sys
+import tempfile
 from typing import Optional
 
 from . import git
@@ -199,6 +200,20 @@ def read_existing_pins(repo_top: Path) -> Dict[str, str]:
 
   process_pin_file(repo_top, callback=callback)
   return results
+
+
+def read_revision_pins(repo_top: Path, revision: str) -> Dict[str, str]:
+  """Reads pins from a repository at a specific revision.
+
+  This directly reads from the index, bypassing the working tree.
+  """
+  contents = git.show_file(repo_top, ref=revision, path=SYNC_DEPS_FILENAME)
+  # Create a temp directory with just this file and proceed as usual,
+  # pretending it is a full repo.
+  with tempfile.TemporaryDirectory() as temp_repo_top:
+    with open(Path(temp_repo_top) / SYNC_DEPS_FILENAME, "wb") as f:
+      f.write(contents)
+    return read_existing_pins(Path(temp_repo_top))
 
 
 SYNC_DEPS_PY = r"""

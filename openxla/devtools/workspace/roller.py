@@ -53,7 +53,14 @@ class GitRepoViaDep(types.RepoAction):
   def update(self, ws: types.WorkspaceMeta, r: types.RepoInfo):
     via_repo = types.ALL_REPOS[self.via]
     via_repo_dir = via_repo.dir(ws)
-    via_pins = pins.read_existing_pins(via_repo_dir)
+    our_pins = pins.read_existing_pins(r.dir(ws))
+    if self.via not in our_pins:
+      raise types.CLIError(f"Via repo {via_repo} not a pin of {r}: {our_pins}")
+    via_repo_revision = our_pins[self.via]
+
+    # Fetch and read the pins at the via repo revision.
+    git.fetch(via_repo_dir)
+    via_pins = pins.read_revision_pins(via_repo_dir, via_repo_revision)
     if self.dep_repo_name not in via_pins:
       raise types.CLIError(
           f"Repository {via_repo} does not contain a version pin "

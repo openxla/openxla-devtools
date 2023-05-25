@@ -79,6 +79,11 @@ def get_remote_head(url: str, branch: str) -> str:
   return comps[0]
 
 
+def show_file(d: Path, *, ref: str, path: str) -> bytes:
+  cp = run(["show", f"{ref}:{path}"], d, check=True, capture_output=True)
+  return cp.stdout
+
+
 def run(args,
         cwd=None,
         *,
