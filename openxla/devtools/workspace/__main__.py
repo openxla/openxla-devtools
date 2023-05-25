@@ -65,6 +65,10 @@ def parse_arguments():
       help="Apply a dependency rolling schedule and make corresponding updates")
   roll_parser.add_argument("schedule", help="Name of the schedule to apply")
 
+  # 'show-pins' sub-command
+  show_pins = subparsers.add_parser("show-pins",
+                                    help="Show current dependency pins")
+
   # 'sync' sub-command
   sync_parser = subparsers.add_parser(
       "sync",
@@ -140,6 +144,11 @@ def do_roll(args):
     action.update(ws, r)
 
 
+def do_show_pins(args):
+  ws, r, toplevel = repos.get_from_dir(Path.cwd())
+  pins.show(ws, r, toplevel)
+
+
 def do_sync(args):
   ws, r, toplevel = repos.get_from_dir(Path.cwd())
   pins.sync(ws,
@@ -161,6 +170,8 @@ def main():
       do_pin(args)
     elif args.sub_command == "roll":
       do_roll(args)
+    elif args.sub_command == "show-pins":
+      do_show_pins(args)
     elif args.sub_command == "sync":
       do_sync(args)
     else:

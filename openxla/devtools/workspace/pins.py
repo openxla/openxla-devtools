@@ -54,6 +54,19 @@ def update(ws: types.WorkspaceMeta,
   process_pin_file(repo_top, callback)
 
 
+def show(ws: types.WorkspaceMeta, repo: types.RepoInfo, repo_top: Path):
+  pins = read_existing_pins(repo_top)
+  for pin_repo_name, pin_revision in pins.items():
+    pin_repo = types.ALL_REPOS[pin_repo_name]
+    pin_dir = pin_repo.dir(ws)
+    git.fetch(pin_dir)
+    cp = git.run(["show", "--pretty=%C(auto)%h %s, (%cd)", pin_revision],
+                 pin_dir,
+                 silent=True)
+    show_output = cp.stdout.decode().splitlines()[0]
+    print(f"* {pin_repo_name}: {show_output}")
+
+
 def update_dep(ws: types.WorkspaceMeta, pin_dict: dict, repo: types.RepoInfo,
                dep_repo: types.RepoInfo, *, require_upstream: bool) -> str:
   dep_dir = dep_repo.dir(ws, validate=True)
