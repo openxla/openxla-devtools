@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Dependency version rolling."""
 
-from typing import Sequence
+from typing import Callable, Sequence
 
 from pathlib import Path
 import re
@@ -35,6 +35,28 @@ class GitRepoHead(types.RepoAction):
                                         dep_repo.tracking_branch)
     print(f"  Remote head for {dep_repo.tracking_branch}: {head_revision}")
     if pins.set_pin_revision(r.dir(ws), self.dep_repo_name, head_revision):
+      print("  Updated pinned revision.")
+    else:
+      print("  No update required.")
+
+
+class GitRepoRevision(types.RepoAction):
+  """Advances a tracked git dependency to a specific revision."""
+
+  def __init__(
+      self, dep_repo_name: str,
+      revision_callback: Callable[[types.WorkspaceMeta, types.RepoInfo], None]):
+    self.dep_repo_name = dep_repo_name
+    self.revision_callback = revision_callback
+
+  def __str__(self):
+    return f"GitRepoRevision({self.revision_callback})"
+
+  def update(self, ws: types.WorkspaceMeta, r: types.RepoInfo):
+    dep_repo = types.ALL_REPOS[self.dep_repo_name]
+    revision = self.revision_callback(ws, r)
+    print(f"  Remote head for {dep_repo.tracking_branch}: {revision}")
+    if pins.set_pin_revision(r.dir(ws), self.dep_repo_name, revision):
       print("  Updated pinned revision.")
     else:
       print("  No update required.")
@@ -72,6 +94,59 @@ class GitRepoViaDep(types.RepoAction):
       print("  Updated pinned revision.")
     else:
       print("  No update required.")
+
+
+class UpgradePyRequirements(types.RepoAction):
+  """Upgrades Python deps via requirements.txt.
+
+  This is typically done after PyPackage version bumps in order to query
+  a subsequent item.
+  """
+
+  def __str__(self):
+    return f"InstallPyRequirements()"
+
+  def update(self, ws: types.WorkspaceMeta, r: types.RepoInfo):
+    repo_dir = r.dir(ws)
+    pip_args = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--force-reinstall",
+        "-r",
+        f"{repo_dir}/requirements.txt",
+    ]
+    pip_args_text = ' '.join([shlex.quote(arg) for arg in pip_args])
+    print(f"[{Path.cwd()}]$ {pip_args_text}")
+    subprocess.run(pip_args, check=True)
+
+
+class PyCommandRevisionCallback(types.RepoAction):
+  """Evaluates a python command via -c in a sub-interpreter.
+
+  Suitable for use as a revision callback to various commands.
+  """
+
+  def __init__(self, command: str):
+    self.command = command
+
+  def __str__(self):
+    return f"PyCommand({self.command})"
+
+  def __call__(self, ws: types.WorkspaceMeta, r: types.RepoInfo):
+    repo_dir = r.dir(ws)
+    args = [
+        sys.executable,
+        "-c",
+        self.command,
+    ]
+    args_text = ' '.join([shlex.quote(arg) for arg in args])
+    print(f"[{Path.cwd()}]$ {args_text}")
+    cp = subprocess.run(args, capture_output=True, check=True)
+    revision = cp.stdout.decode().strip()
+    print(f"Revision = {revision}")
+    return revision
 
 
 class PyPackage(types.RepoAction):

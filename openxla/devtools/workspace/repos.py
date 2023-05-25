@@ -49,15 +49,30 @@ types.RepoInfo(
     rw_url="git@github.com:openxla/openxla-pjrt-plugin.git",
     deps=["iree", "jax", "xla"],
     rolling_schedules={
-        "continuous": [
-            # We want to pick up IREE runtime changes continuously.
-            # For everything else, do it nightly.
+        "iree_runtime": [
+            # Advance the IREE runtime and APIs to head.
             roller.GitRepoHead("iree"),
         ],
+        "iree_nightly": [
+            # Installs the IREE nightly pip package and queries it for the
+            # IREE revision it was built at.
+            roller.PyPackage(
+                "iree-compiler",
+                pip_flags=[
+                    "-f",
+                    "https://openxla.github.io/iree/pip-release-links.html"
+                ],
+                update_requirements=["requirements.txt"]),
+            roller.UpgradePyRequirements(),
+            roller.GitRepoRevision(
+                "iree",
+                roller.PyCommandRevisionCallback(
+                    "import iree.compiler.version as v; print(v.REVISIONS['IREE'])"
+                )),
+        ],
         "nightly": [
-            roller.GitRepoHead("iree"),
-            roller.GitRepoHead("xla"),
-            roller.GitRepoHead("jax"),
+            # Installs the IREE nightly pip package and queries it for the
+            # IREE revision it was built at.
             roller.PyPackage(
                 "iree-compiler",
                 pip_flags=[
@@ -73,6 +88,16 @@ types.RepoInfo(
                     "--pre",
                 ],
                 update_requirements=["requirements.txt"]),
+            roller.UpgradePyRequirements(),
+            roller.GitRepoRevision(
+                "iree",
+                roller.PyCommandRevisionCallback(
+                    "import iree.compiler.version as v; print(v.REVISIONS['IREE'])"
+                )),
+
+            # We just let these float to head.
+            roller.GitRepoHead("xla"),
+            roller.GitRepoHead("jax"),
         ],
     },
 )
